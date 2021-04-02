@@ -1,0 +1,12 @@
+name: c3sdl
+channels:
+  - conda-forge
+dependencies:
+  - numpy
+  - cartopy
+  - matplotlib
+  - xesmf
+  - cdsapi
+  - xarray
+  - xskillscore>=0.0.19
+  - cfgrib
