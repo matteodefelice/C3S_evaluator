@@ -86,9 +86,10 @@ class C3S_data_loader:
 
         if reply.get('state') != 'completed':
             print(request_dict)
+            # TODO replace sys.exit with raise and check climetlab implementation
             sys.exit('Request not completed, check the request of the status of CDS')
-#        else:
- #           r.download('fct_temp_out.grib')
+        else:
+            r.download('fct_temp_out.grib')
 
         # OBSERVATIONS ----------------------------------------------------------
         if not self.quiet:
@@ -115,8 +116,8 @@ class C3S_data_loader:
         if reply.get('state') != 'completed':
             print(request_dict)
             sys.exit('Request not completed, check the request or the status of CDS')
-  #      else:
-   #         r.download('obs_temp_out.grib')
+        else:
+            r.download('obs_temp_out.grib')
         
         # Reading GRIB files into xarray Datasets and calculate the seasonal averages
         if not self.quiet:
@@ -148,7 +149,11 @@ class C3S_data_loader:
         """
         Return the xarray Dataset containing seasonal data and ERA5
         """
-        return(self._data)
+        if not hasattr(self, '_data'):
+            return xr.Dataset()
+        else:
+            return(self._data)
+
     def get_basename(self) -> str:
         """
         Return the basename used to save the retrieved data
@@ -183,13 +188,13 @@ class C3S_data_loader:
             quiet (boolean): define if the execution should print out some information or not 
         """
         self._MODEL_DIC = {
-            'ecmwf':{'system': '5', 'range_years':(1993, 2016)}, 
-            'ukmo':{'system': 600, 'range_years':(1993, 2016)},
-            'meteo_france':{'system': '7', 'range_years':(1993,2016)},
-            'dwd':{'system': '21', 'range_years':(1993,2016)},
-            'cmcc':{'system': '35', 'range_years':(1993,2016)},
-            'ncep':{'system': '2', 'range_years':(1993,2016)},
-            'jma':{'system': '2', 'range_years':(1993,2016)}
+            'ecmwf':{'system': '5', 'range_years':(1993, 2016), 'start_dates':range(1, 13)}, 
+            'ukmo':{'system': 600, 'range_years':(1993, 2016), 'start_dates':[3,4]},
+            'meteo_france':{'system': '7', 'range_years':(1993,2016), 'start_dates':range(1, 13)},
+            'dwd':{'system': '21', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 11, 12]},
+            'cmcc':{'system': '35', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 10, 11, 12]},
+            'ncep':{'system': '2', 'range_years':(1993,2016), 'start_dates': range(1, 13)},
+            'jma':{'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 10, 11, 12]}
             }
         self.quiet = quiet
         self.read_config()
@@ -198,13 +203,24 @@ class C3S_data_loader:
         if not self.quiet:
             print(f"Target filename {self.file_out}")
 
-        if force_download or not os.path.exists(self.file_out+'.nc'):
-            self._retrieve_cds_and_merge(centre, variable, start_month, lead_time)
-            self._data.to_netcdf(self.file_out+'.nc')
+        if centre not in ['ecmwf', 'ukmo', 'meteo_france', 'dwd', 'cmcc', 'ncep', 'jma']:
+            print(f'Centre {centre} not recognised')
+            raise ValueError()
+        elif start_month not in self._MODEL_DIC.get(centre).get('start_dates'):
+            print(f'The starting month {start_month} is not available for {centre} system, please check https://confluence.ecmwf.int/display/CKB/Summary+of+available+data')
+            raise ValueError()
         else:
-            if not self.quiet: 
-                print(f"Loading existing file {self.file_out+'.nc'}")
-        
-        self._data = xr.open_dataset(self.file_out+'.nc')
+            if force_download or not os.path.exists(self.file_out+'.nc'):
+                try:
+                    self._retrieve_cds_and_merge(centre, variable, start_month, lead_time)
+                    self._data.to_netcdf(self.file_out+'.nc')
+                    self._data = xr.open_dataset(self.file_out+'.nc')
+                except:
+                    print('An error occured while retrieving and processing data from the CDS')
+            else:
+                if not self.quiet: 
+                    print(f"Loading existing file {self.file_out+'.nc'}")
+                self._data = xr.open_dataset(self.file_out+'.nc')
+            
 
 
