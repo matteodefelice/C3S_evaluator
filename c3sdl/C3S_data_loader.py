@@ -2,7 +2,7 @@ import cdsapi
 import xarray as xr
 import numpy as np
 import xesmf as xe 
-import os.path, sys, yaml, warnings
+import os.path, sys, yaml, warnings, datetime
 
 class C3S_data_loader:
     """
@@ -128,10 +128,13 @@ class C3S_data_loader:
         if not self.quiet:
             print('Processing ERA5: renaming coordinates and computing annual average')
         obs = xr.open_dataset('obs_temp_out.grib', engine = 'cfgrib')
+        # This to remove the spurious months for accumulated variables
+        obs = obs.sel(time=np.isin(obs['valid_time.month'], lead_time))
         obs_y = obs.groupby('time.year').mean('time').rename({'latitude':'lat', 'longitude': 'lon'})
         # Regrid ERA5 on forecast's grid
         if not self.quiet:
             print("Regridding ERA5 on forecasts' grid")
+        
         regridder = xe.Regridder(obs_y, fct_final, 'bilinear')
         obs_final = regridder(obs_y)
         
@@ -141,9 +144,20 @@ class C3S_data_loader:
         if len(fct_name_var) > 1 or len(obs_name_var) > 1:
         	sys.exit('Error in grib files: variables > 1')
         if fct_name_var[0] != obs_name_var[0]:
-        	sys.exit(f'Error in grib files: variables names do not match ({fct_name_var[0]=} != {obs_name_var[0]=}')
+            # Manage various cases
+            if fct_name_var[0] == 'tprate' and obs_name_var[0] == 'tp':
+                print('Convert total precipitation rate to total precipitation')
+                fct_final['tprate'] *= 86400
+            else:
+        	    raise Exception(f'Error in grib files: variables names do not match ({fct_name_var[0]=} != {obs_name_var[0]=}')
+        
         # Put the data into the instance structure
         self._data = xr.merge([fct_final.rename({fct_name_var[0]: 'fct_var'}), obs_final.rename({obs_name_var[0]: 'obs_var'})])
+        self._data.attrs = {'created': datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+            'hostname': os.uname().nodename,
+            'centre': centre,
+            'variable': variable
+        }
 
     def get_data(self)-> xr.Dataset:
         """
