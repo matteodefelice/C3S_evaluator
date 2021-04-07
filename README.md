@@ -73,3 +73,6 @@ Then some PNGs will appear showing the global metrics and skill scores.
 
 By default, the functions will calculate the metrics on the entire domain for all the hindcast years. However, using `e.get_data()` and `e.set_data()`, it is possible to get the forecast/reanalysis data, subset it (in space and/or time) and then go ahead with the computation. 
 
+## NOTE
+
+- In some cases the same variable keyword (e.g. `total_precipitation`) leads to different variables in the seasonal forecasts and ERA5 (`tprate` and `tp` respectively for precipitation). For the precipitation a conversion is automatically performed. 

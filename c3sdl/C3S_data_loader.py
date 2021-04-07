@@ -131,12 +131,23 @@ class C3S_data_loader:
         # This to remove the spurious months for accumulated variables
         obs = obs.sel(time=np.isin(obs['valid_time.month'], lead_time))
         obs_y = obs.groupby('time.year').mean('time').rename({'latitude':'lat', 'longitude': 'lon'})
-        # Regrid ERA5 on forecast's grid
-        if not self.quiet:
-            print("Regridding ERA5 on forecasts' grid")
-        
-        regridder = xe.Regridder(obs_y, fct_final, 'bilinear')
-        obs_final = regridder(obs_y)
+
+        if self.grid == 'original':
+            # Regrid ERA5 on forecast's grid
+            if not self.quiet:
+                print("Regridding ERA5 on forecasts' grid")
+            
+            regridder = xe.Regridder(obs_y, fct_final, 'bilinear')
+            obs_final = regridder(obs_y)
+        elif self.grid == '1deg':
+            if not self.quiet:
+                print("Regridding forecasts and ERA5 to 1-degree regular grid")
+            ds_out = xr.Dataset({'lat': (['lat'], np.arange(-89, 89, 1)),
+                     'lon': (['lon'], np.arange(-180, 180, 1))})
+            regridder = xe.Regridder(fct_final, ds_out, 'bilinear')
+            fct_final = regridder(fct_final)
+            regridder = xe.Regridder(obs_y, ds_out, 'bilinear')
+            obs_final = regridder(obs_y)
         
         # Check if the variable names and numbers are consistent
         fct_name_var = [x for x in fct_final.data_vars]
@@ -174,7 +185,7 @@ class C3S_data_loader:
         """
         return(self.file_out)
 
-    def __init__(self, centre:str, variable:str, start_month:int, lead_time:list, force_download=False, quiet = False):
+    def __init__(self, centre:str, variable:str, start_month:int, lead_time:list, grid:str = 'original', force_download=False, quiet = False):
         """
         Initialise a `C3S_data_loader` object, which represents seasonal+reanalysis monthly data from the CDS. 
         
@@ -198,6 +209,7 @@ class C3S_data_loader:
             variable (str): one of the variable (e.g. '2m_temperature')
             start_month (int): starting month 1-12
             lead_time (list): list of the lead times that will be averaged to calculate the seasonal average
+            grid (str): specify `original` (default) if you want to use the seasonal forecast's grid otherwise `1deg` to regrid to 1-degree regular grid
             force_download (boolean): force the retrieving of the data even if an existing processed file is found
             quiet (boolean): define if the execution should print out some information or not 
         """
@@ -210,10 +222,11 @@ class C3S_data_loader:
             'ncep':{'system': '2', 'range_years':(1993,2016), 'start_dates': range(1, 13)},
             'jma':{'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 10, 11, 12]}
             }
+        self.grid = grid
         self.quiet = quiet
         self.read_config()
         # File with SEASONAL + OBS
-        self.file_out = os.path.join(self.DATA_DIR,  f'{centre}-{variable}-S{start_month}-L{lead_time[0]}-{lead_time[-1]}')
+        self.file_out = os.path.join(self.DATA_DIR,  f'{centre}-{variable}-S{start_month}-L{lead_time[0]}-{lead_time[-1]}-grid_{grid[0:4]}')
         if not self.quiet:
             print(f"Target filename {self.file_out}")
 
