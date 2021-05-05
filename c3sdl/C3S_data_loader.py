@@ -56,7 +56,7 @@ class C3S_data_loader:
         # define system
         system = self._MODEL_DIC.get(centre).get('system')
         # check if the time range cross the year
-        if any([(start_month+x)>12 for x in lead_time]):
+        if any([(start_month+x)>13 for x in lead_time]):
             sys.exit('This function does not support yet forecast periods spanning two years')
 
         # SEASONAL FORECAST ------------------------------------------------------------------
@@ -238,12 +238,10 @@ class C3S_data_loader:
             raise ValueError()
         else:
             if force_download or not os.path.exists(self.file_out+'.nc'):
-                try:
-                    self._retrieve_cds_and_merge(centre, variable, start_month, lead_time)
-                    self._data.to_netcdf(self.file_out+'.nc')
-                    self._data = xr.open_dataset(self.file_out+'.nc')
-                except:
-                    print('An error occured while retrieving and processing data from the CDS')
+                self._retrieve_cds_and_merge(centre, variable, start_month, lead_time)
+                self._data.to_netcdf(self.file_out+'.nc')
+                self._data = xr.open_dataset(self.file_out+'.nc')
+                
             else:
                 if not self.quiet: 
                     print(f"Loading existing file {self.file_out+'.nc'}")
