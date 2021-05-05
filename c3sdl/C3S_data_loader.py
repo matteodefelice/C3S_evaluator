@@ -129,7 +129,7 @@ class C3S_data_loader:
             print('Processing ERA5: renaming coordinates and computing annual average')
         obs = xr.open_dataset('obs_temp_out.grib', engine = 'cfgrib')
         # This to remove the spurious months for accumulated variables
-        obs = obs.sel(time=np.isin(obs['valid_time.month'], lead_time))
+        obs = obs.sel(time=np.isin(obs['valid_time.month'], [x + start_month - 1 for x in lead_time]))
         obs_y = obs.groupby('time.year').mean('time').rename({'latitude':'lat', 'longitude': 'lon'})
 
         if self.grid == 'original':
