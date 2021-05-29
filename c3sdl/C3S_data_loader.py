@@ -74,6 +74,7 @@ class C3S_data_loader:
             print('Retrieving seasonal forecasts...')
         c = cdsapi.Client()
         try:
+            print(request_dict)
             r = c.retrieve(
                     'seasonal-monthly-single-levels',
                     request_dict) 
@@ -205,7 +206,7 @@ class C3S_data_loader:
         NOTE: time-ranges crossing the 31th December, (for example DJF), are not yet supported
 
         Arguments:
-            centre (str): Originating centre (one in ['ecmwf', 'meteo_france', 'dwd', 'cmcc'', 'ncep', 'jma'])
+            centre (str): Originating centre (one in ['ecmwf', 'meteo_france', 'dwd', 'cmcc'', 'ncep', 'jma', 'ukmo', 'ukmo15'])
             variable (str): one of the variable (e.g. '2m_temperature')
             start_month (int): starting month 1-12
             lead_time (list): list of the lead times that will be averaged to calculate the seasonal average
@@ -215,12 +216,13 @@ class C3S_data_loader:
         """
         self._MODEL_DIC = {
             'ecmwf':{'system': '5', 'range_years':(1993, 2016), 'start_dates':range(1, 13)}, 
-            'ukmo':{'system': 600, 'range_years':(1993, 2016), 'start_dates':[3,4]},
+            'ukmo':{'system': 600, 'range_years':(1993, 2016), 'start_dates':[3,4,5,6]},
+            'ukmo15':{'system': 15, 'range_years':(1993, 2016), 'start_dates':[1, 2, 5, 6, 7, 8, 9, 10, 11, 12]},
             'meteo_france':{'system': '7', 'range_years':(1993,2016), 'start_dates':range(1, 13)},
-            'dwd':{'system': '21', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 11, 12]},
-            'cmcc':{'system': '35', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 10, 11, 12]},
+            'dwd':{'system': '21', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 11, 12]},
+            'cmcc':{'system': '35', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]},
             'ncep':{'system': '2', 'range_years':(1993,2016), 'start_dates': range(1, 13)},
-            'jma':{'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 10, 11, 12]}
+            'jma':{'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]}
             }
         self.grid = grid
         self.quiet = quiet
