@@ -54,6 +54,7 @@ class C3S_data_loader:
         # Define start/end year according to hindcast period
         start_year, end_year = self._MODEL_DIC.get(centre).get('range_years')
         # define system
+        centre_name = self._MODEL_DIC.get(centre).get('centre')
         system = self._MODEL_DIC.get(centre).get('system')
         # check if the time range cross the year
         if any([(start_month+x)>13 for x in lead_time]):
@@ -61,7 +62,7 @@ class C3S_data_loader:
 
         # SEASONAL FORECAST ------------------------------------------------------------------
         request_dict = {
-                'originating_centre': centre,
+                'originating_centre': centre_name,
                 'variable':variable,
                 'product_type':'monthly_mean',
                 'year':[x for x in map(str, range(start_year, end_year))],
@@ -215,13 +216,14 @@ class C3S_data_loader:
             quiet (boolean): define if the execution should print out some information or not 
         """
         self._MODEL_DIC = {
-            'ecmwf':{'system': '5', 'range_years':(1993, 2016), 'start_dates':range(1, 13)}, 
-            'ukmo':{'system': 600, 'range_years':(1993, 2016), 'start_dates':[3,4,5,6]},
-            'meteo_france':{'system': '7', 'range_years':(1993,2016), 'start_dates':range(1, 13)},
-            'dwd':{'system': '21', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 11, 12]},
-            'cmcc':{'system': '35', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]},
-            'ncep':{'system': '2', 'range_years':(1993,2016), 'start_dates': range(1, 13)},
-            'jma':{'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]}
+            'ecmwf':{'centre': 'ecmwf', 'system': '5', 'range_years':(1993, 2016), 'start_dates':range(1, 13)}, 
+            'ukmo':{'centre': 'ukmo', 'system': 600, 'range_years':(1993, 2016), 'start_dates':[3,4,5,6]},
+            'ukmo15':{'centre': 'ukmo', 'system': 15, 'range_years':(1993, 2016), 'start_dates':[1, 2, 5,6,7,8,9,10,11,12]},
+            'meteo_france':{'centre': 'meteo_france', 'system': '7', 'range_years':(1993,2016), 'start_dates':range(1, 13)},
+            'dwd':{'centre': 'dwd', 'system': '21', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 11, 12]},
+            'cmcc':{'centre': 'cmcc', 'system': '35', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]},
+            'ncep':{'centre': 'ncep', 'system': '2', 'range_years':(1993,2016), 'start_dates': range(1, 13)},
+            'jma':{'centre': 'jma', 'system': '2', 'range_years':(1993,2016), 'start_dates': [1, 2, 3, 4, 5, 6, 7, 10, 11, 12]}
             }
         self.grid = grid
         self.quiet = quiet
@@ -231,8 +233,8 @@ class C3S_data_loader:
         if not self.quiet:
             print(f"Target filename {self.file_out}")
 
-        if centre not in ['ecmwf', 'ukmo', 'meteo_france', 'dwd', 'cmcc', 'ncep', 'jma']:
-            print(f'Centre {centre} not recognised')
+        if centre not in ['ecmwf', 'ukmo', 'ukmo15', 'meteo_france', 'dwd', 'cmcc', 'ncep', 'jma']:
+            print(f'Forecasting system {centre} not recognised')
             raise ValueError()
         elif start_month not in self._MODEL_DIC.get(centre).get('start_dates'):
             print(f'The starting month {start_month} is not available for {centre} system, please check https://confluence.ecmwf.int/display/CKB/Summary+of+available+data')
