@@ -146,8 +146,15 @@ class C3S_data_loader:
                 print("Regridding forecasts and ERA5 to 1-degree regular grid")
             ds_out = xr.Dataset({'lat': (['lat'], np.arange(-89, 89, 1)),
                      'lon': (['lon'], np.arange(-180, 180, 1))})
+
+            # Convert coords to -180, 180 before regridding
+            fct_final = fct_final.assign_coords(lon=(((fct_final.lon + 180) % 360) - 180))
+            fct_final = fct_final.sortby(fct_final.lon)
             regridder = xe.Regridder(fct_final, ds_out, 'bilinear')
             fct_final = regridder(fct_final)
+
+            obs_y = obs_y.assign_coords(lon=(((obs_y.lon + 180) % 360) - 180))
+            obs_y = obs_y.sortby(obs_y.lon)
             regridder = xe.Regridder(obs_y, ds_out, 'bilinear')
             obs_final = regridder(obs_y)
         
