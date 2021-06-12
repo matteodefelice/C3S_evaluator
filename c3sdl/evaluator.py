@@ -57,7 +57,7 @@ class evaluator:
             print('Computing correlation')
         self._skill_data = self._skill_data.assign(spearman = xs.spearman_r(fct_ens_mean, self._data['obs_var'], dim = 'year'))
         self._skill_data = self._skill_data.assign(spearman_pvalue = xs.spearman_r_p_value(fct_ens_mean, self._data['obs_var'], dim = 'year'))
-        self._skill_data = self._skill_data.assign(spearman_p0001 = self._skill_data.spearman.where(self._skill_data.spearman_pvalue <= 1e-3))
+        self._skill_data = self._skill_data.assign(spearman_p001 = self._skill_data.spearman.where(self._skill_data.spearman_pvalue <= 1e-2))
         if not self.quiet:
             print('Computing climatology and bias')
         self._skill_data = self._skill_data.assign(clim_obs = self._data.obs_var.mean(dim = 'year'))
@@ -121,6 +121,56 @@ class evaluator:
             print(f"Save skill data to {self._basename + '.solved.nc'}")
         self._skill_data.to_netcdf(self._basename + '.solved.nc')
 
+    def compute_classification_scores(self):
+        """
+        Calculate classification metrics comparing the seasonal forecast with the reanalysis data. 
+        The prediction from the seasonal forecasts' ensemble is considered True when more than 50% of the members agree. 
+        
+        The following metrics are computed:
+        - Hit Rate (Upper and Lower)
+        """
+
+        # check if nan exists
+        if (np.isnan(self._data['obs_var']).any() or np.isnan(self._data['fct_var']).any()):
+            nan_are_present = True
+        else:
+            nan_are_present = False
+    	# CLASSIFICATION scores -----------------------------------------------------------
+        if not self.quiet:
+            print('Computing Upper Hit Rate')
+        
+        obs_thres = self._data['obs_var'] > self._data['obs_var'].quantile(2/3, dim = 'year', skipna = nan_are_present)
+        fct_thres = (self._data['fct_var'] > self._data['fct_var'].quantile(2/3, dim = 'year', skipna = False)).mean("number")
+
+        o_category_edges = np.array([0, 1, 2]) 
+        f_category_edges = np.array([0, 0.5, 1]) # It's True when >50% of the members agree
+
+        # Calculate contingency
+        cc = xs.Contingency(obs_thres, fct_thres, 
+               o_category_edges, f_category_edges,
+               dim='year') 
+
+        self._skill_data = self._skill_data.assign(uhr = cc.hit_rate())
+        if not self.quiet:
+            print('Computing Lower Hit Rate')
+
+        obs_thres = self._data['obs_var'] < self._data['obs_var'].quantile(1/3, dim = 'year', skipna = nan_are_present)
+        fct_thres = (self._data['fct_var'] < self._data['fct_var'].quantile(1/3, dim = 'year', skipna = False)).mean("number")
+
+        o_category_edges = np.array([0, 1, 2]) 
+        f_category_edges = np.array([0, 0.5, 1]) # It's True when >50% of the members agree
+
+        # Calculate contingency
+        cc = xs.Contingency(obs_thres, fct_thres, 
+               o_category_edges, f_category_edges,
+               dim='year') 
+
+        self._skill_data = self._skill_data.assign(lhr = cc.hit_rate())
+
+        if not self.quiet:
+            print(f"Save skill data to {self._basename + '.solved.nc'}")
+        self._skill_data.to_netcdf(self._basename + '.solved.nc')
+
     def get_data(self) -> xr.Dataset:
         """
         Return the xarray Dataset containing seasonal data and ERA5
@@ -143,8 +193,9 @@ class evaluator:
         """
         Save to disk a set of plots for the computed metrics. 
         """
-        variables   = ['spearman', 'rmse', 'mae', 'crps', 'ubss', 'lbss', 'clim_bias', 'nmae', 'spearman_p0001', 'rps', 'rpss']
-        labels      = ['spearman correlation', 'RMSE', 'MAE', 'CRPS', 'Upper BSS', 'Lower BSS', 'Clim. bias (obs-fct)', 'NMAE', 'spearman corr. (p-value < 1e-3)', 'RPS', 'RPSS']
+        
+        variables   = ['spearman', 'rmse', 'mae', 'crps', 'ubss', 'lbss', 'clim_bias', 'nmae', 'spearman_p001', 'rps', 'rpss', 'uhr', 'lhr']
+        labels      = ['spearman correlation', 'RMSE', 'MAE', 'CRPS', 'Upper BSS', 'Lower BSS', 'Clim. bias (obs-fct)', 'NMAE', 'spearman corr. (p-value < 1e-2)', 'RPS', 'RPSS', 'Hit Rate (Upper)', 'Hit Rate (Lower)']
         for this_fig in zip(variables, labels):
             if this_fig[0] in self._skill_data.data_vars.keys():
                 plt.figure(figsize=(1200/300, 800/300), dpi=300)
