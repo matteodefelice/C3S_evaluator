@@ -128,8 +128,9 @@ class evaluator:
         
         The following metrics are computed:
         - Hit Rate (Upper and Lower)
+        - Balanced Accuracy (Upper and Lower)
         """
-
+        
         # check if nan exists
         if (np.isnan(self._data['obs_var']).any() or np.isnan(self._data['fct_var']).any()):
             nan_are_present = True
@@ -151,6 +152,10 @@ class evaluator:
                dim='year') 
 
         self._skill_data = self._skill_data.assign(uhr = cc.hit_rate())
+        # BACC
+        tnr = cc.correct_negatives() / (cc.correct_negatives() + cc.misses())
+        bacc = (cc.hit_rate() + tnr)/2
+        self._skill_data = self._skill_data.assign(ubacc = bacc)
         if not self.quiet:
             print('Computing Lower Hit Rate')
 
@@ -166,6 +171,10 @@ class evaluator:
                dim='year') 
 
         self._skill_data = self._skill_data.assign(lhr = cc.hit_rate())
+        # BACC
+        tnr = cc.correct_negatives() / (cc.correct_negatives() + cc.misses())
+        bacc = (cc.hit_rate() + tnr)/2
+        self._skill_data = self._skill_data.assign(lbacc = bacc)
 
         if not self.quiet:
             print(f"Save skill data to {self._basename + '.solved.nc'}")
@@ -197,6 +206,7 @@ class evaluator:
         variables   = ['spearman', 'rmse', 'mae', 'crps', 'ubss', 'lbss', 'clim_bias', 'nmae', 'spearman_p001', 'rps', 'rpss', 'uhr', 'lhr']
         labels      = ['spearman correlation', 'RMSE', 'MAE', 'CRPS', 'Upper BSS', 'Lower BSS', 'Clim. bias (obs-fct)', 'NMAE', 'spearman corr. (p-value < 1e-2)', 'RPS', 'RPSS', 'Hit Rate (Upper)', 'Hit Rate (Lower)']
         for this_fig in zip(variables, labels):
+            print(this_fig)
             if this_fig[0] in self._skill_data.data_vars.keys():
                 plt.figure(figsize=(1200/300, 800/300), dpi=300)
                 ax = plt.axes(projection=ccrs.Robinson())
