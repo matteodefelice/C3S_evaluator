@@ -2,7 +2,7 @@ name: c3sdl
 channels:
   - conda-forge
 dependencies:
-  - numpy
+  - numpy=1.21
   - cartopy
   - matplotlib
   - xesmf
